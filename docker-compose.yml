@@ -1,10 +1,6 @@
-version: '3'
-
 services:
   api-keys-manager:
     build: .
-    ports:
-      - "8003:8003"
     environment:
       - DB_HOST=${DB_HOST:-postgres}
       - DB_PORT=${DB_PORT:-5432}
