@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  api-keys-manager:
+    build: .
+    ports:
+      - "8003:8003"
+    environment:
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-whisper_db}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASS=${DB_PASS:-postgres}
+      - ADMIN_ALLOWED_IPS=${ADMIN_ALLOWED_IPS:-127.0.0.1,::1}
+    restart: unless-stopped
+    networks:
+      - whisper-network
+
+networks:
+  whisper-network:
+    external: true
