@@ -7,11 +7,11 @@ services:
       - DB_NAME=${DB_NAME:-whisper_db}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASS=${DB_PASS:-postgres}
-      - ADMIN_ALLOWED_IPS=${ADMIN_ALLOWED_IPS:-127.0.0.1,::1}
+      - ADMIN_ALLOWED_IPS=${ADMIN_ALLOWED_IPS:-}
     restart: unless-stopped
     networks:
       - whisper-network
 
 networks:
   whisper-network:
-    external: true
+    external: false

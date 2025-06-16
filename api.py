@@ -52,7 +52,7 @@ async def verify_admin_access(request: Request):
     Pode ser expandido para incluir autenticação adicional.
     """
     # Lista de IPs permitidos para acesso administrativo
-    allowed_admin_ips = os.getenv("ADMIN_ALLOWED_IPS", "127.0.0.1,::1").split(",")
+    allowed_admin_ips = os.getenv("ADMIN_ALLOWED_IPS", "").split(",")
     client_ip = request.client.host
     
     # Verifica se o IP do cliente está na lista de IPs permitidos
