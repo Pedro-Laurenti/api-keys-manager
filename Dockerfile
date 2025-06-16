@@ -10,7 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Porta em que a API estará disponível
-EXPOSE 8003
+# A variável API_PORT será definida em tempo de execução
+EXPOSE ${API_PORT:-8003}
 
-# Comando para executar a API
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8003"]
+# Comando para executar a API usando um script de inicialização para interpretar variáveis de ambiente
+CMD python api.py

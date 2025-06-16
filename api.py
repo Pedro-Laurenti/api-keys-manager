@@ -52,13 +52,23 @@ async def verify_admin_access(request: Request):
     Pode ser expandido para incluir autenticação adicional.
     """
     # Lista de IPs permitidos para acesso administrativo
-    allowed_admin_ips = os.getenv("ADMIN_ALLOWED_IPS", "").split(",")
+    admin_ips_setting = os.getenv("ADMIN_ALLOWED_IPS", "")
     client_ip = request.client.host
     
+    # Se ADMIN_ALLOWED_IPS for "*", permite acesso de qualquer IP
+    if admin_ips_setting.strip() == "*":
+        return True
+    
+    allowed_admin_ips = admin_ips_setting.split(",")
+    
+    # Se não houver IPs configurados, permitimos o acesso de localhost (para desenvolvimento)
+    if not any(ip.strip() for ip in allowed_admin_ips) and client_ip in ["127.0.0.1", "localhost", "::1"]:
+        return True
+    
     # Verifica se o IP do cliente está na lista de IPs permitidos
-    if client_ip not in [ip.strip() for ip in allowed_admin_ips]:
+    if client_ip not in [ip.strip() for ip in allowed_admin_ips if ip.strip()]:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail="Acesso negado. IP não autorizado para acesso administrativo."
         )
     

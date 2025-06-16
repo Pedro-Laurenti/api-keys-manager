@@ -21,13 +21,18 @@ async def get_db_conn():
     Returns:
         Conexão com o banco de dados PostgreSQL
     """
-    return await asyncpg.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASS,
-        database=DB_NAME
-    )
+    try:
+        return await asyncpg.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASS,
+            database=DB_NAME
+        )
+    except Exception as e:
+        print(f"Erro ao conectar ao banco de dados: {str(e)}")
+        print(f"Detalhes de conexão: Host={DB_HOST}, Port={DB_PORT}, DB={DB_NAME}, User={DB_USER}")
+        raise
 
 async def test_connection():
     """
