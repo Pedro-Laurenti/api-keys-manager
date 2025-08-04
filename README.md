@@ -7,7 +7,6 @@ Este serviço gerencia API Keys que são utilizadas para autenticar usuários na
 - Criação de novas API Keys
 - Listagem de API Keys existentes
 - Revogação de API Keys
-- Suporte a restrição de IPs para cada API Key
 - Expiração automática de API Keys
 
 ## Endpoints
@@ -52,10 +51,6 @@ ou
 ```bash
 uvicorn api:app --host 0.0.0.0 --port 8003 --reload
 ```
-
-## Segurança
-
-Por padrão, os endpoints administrativos só podem ser acessados a partir de endereços IP listados na variável de ambiente `ADMIN_ALLOWED_IPS`.
 
 ## Compartilhamento do banco de dados
 

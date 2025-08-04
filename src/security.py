@@ -63,7 +63,6 @@ async def validate_api_key(api_key: str, client_ip: Optional[str] = None) -> Opt
     
     Args:
         api_key: A API Key a ser validada
-        client_ip: Endereço IP do cliente (opcional)
     
     Returns:
         Dicionário com informações sobre a API Key se for válida, None caso contrário

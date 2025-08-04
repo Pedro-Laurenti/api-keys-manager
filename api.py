@@ -40,53 +40,14 @@ app = FastAPI(
 class APIKeyRequest(BaseModel):
     name: str
     expires_days: Optional[int] = 365  # Validade em dias, padrão de 1 ano
-    allowed_ips: Optional[List[str]] = None  # Lista de IPs permitidos (opcional)
 
 class RevokeRequest(BaseModel):
     key_id: int
 
-# Adicionando verificação de IP de administração
-async def verify_admin_access(request: Request):
-    """
-    Verifica se a solicitação tem acesso de administração.
-    Pode ser expandido para incluir autenticação adicional.
-    """
-    # Lista de IPs permitidos para acesso administrativo
-    admin_ips_setting = os.getenv("ADMIN_ALLOWED_IPS", "")
-    client_ip = request.client.host
-    
-    # Log para debug - mostra o IP do cliente e configuração
-    logger.info(f"Acesso de IP: {client_ip}. Configuração ADMIN_ALLOWED_IPS: {admin_ips_setting}")
-    
-    # Se ADMIN_ALLOWED_IPS for "*", permite acesso de qualquer IP
-    if admin_ips_setting.strip() == "*":
-        logger.info("Acesso permitido: configuração * permite qualquer IP")
-        return True
-    
-    allowed_admin_ips = admin_ips_setting.split(",")
-    
-    # Se não houver IPs configurados, permitimos o acesso de localhost (para desenvolvimento)
-    if not any(ip.strip() for ip in allowed_admin_ips) and client_ip in ["127.0.0.1", "localhost", "::1"]:
-        return True
-    
-    # Verifica se o IP do cliente está na lista de IPs permitidos
-    allowed_ips_cleaned = [ip.strip() for ip in allowed_admin_ips if ip.strip()]
-    logger.info(f"IPs permitidos após processamento: {allowed_ips_cleaned}")
-    
-    if client_ip not in allowed_ips_cleaned:
-        logger.error(f"Acesso negado para IP: {client_ip}. IPs permitidos: {allowed_ips_cleaned}")
-        raise HTTPException(
-            status_code=403,
-            detail="Acesso negado. IP não autorizado para acesso administrativo."
-        )
-    else:
-        logger.info(f"Acesso permitido para IP: {client_ip}")
-    
-    return True
 
 # Endpoints para gerenciar API Keys (com proteção especial)
 @app.post("/api-keys", status_code=status.HTTP_201_CREATED)
-async def create_key(request: Request, api_key_request: APIKeyRequest, _: bool = Depends(verify_admin_access)):
+async def create_key(request: Request, api_key_request: APIKeyRequest):
     """
     Cria uma nova API Key.
     
@@ -96,8 +57,7 @@ async def create_key(request: Request, api_key_request: APIKeyRequest, _: bool =
     try:
         result = await generate_api_key(
             name=api_key_request.name,
-            expires_days=api_key_request.expires_days,
-            allowed_ips=api_key_request.allowed_ips
+            expires_days=api_key_request.expires_days
         )
         return result
     except Exception as e:
@@ -105,11 +65,9 @@ async def create_key(request: Request, api_key_request: APIKeyRequest, _: bool =
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api-keys")
-async def list_keys(request: Request, active_only: bool = False, _: bool = Depends(verify_admin_access)):
+async def list_keys(request: Request, active_only: bool = False):
     """
     Lista todas as API Keys.
-    
-    Este endpoint está protegido e só pode ser acessado de IPs autorizados.
     """
     try:
         keys = await get_api_keys(active_only)
@@ -119,11 +77,9 @@ async def list_keys(request: Request, active_only: bool = False, _: bool = Depen
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api-keys/revoke")
-async def revoke_key(request: Request, revoke_request: RevokeRequest, _: bool = Depends(verify_admin_access)):
+async def revoke_key(request: Request, revoke_request: RevokeRequest):
     """
     Revoga (desativa) uma API Key.
-    
-    Este endpoint está protegido e só pode ser acessado de IPs autorizados.
     """
     try:
         success = await revoke_api_key(revoke_request.key_id)
@@ -143,20 +99,6 @@ async def status():
     """
     return {"status": "online", "service": "API Key Manager"}
 
-@app.get("/check-ip")
-async def check_ip(request: Request):
-    """
-    Retorna o IP do cliente detectado pelo servidor.
-    Útil para diagnosticar problemas de autorização.
-    """
-    client_ip = request.client.host
-    admin_ips = os.getenv("ADMIN_ALLOWED_IPS", "")
-    
-    return {
-        "your_ip": client_ip,
-        "admin_allowed_ips": admin_ips,
-        "access_allowed": admin_ips.strip() == "*" or client_ip in [ip.strip() for ip in admin_ips.split(",") if ip.strip()]
-    }
 
 if __name__ == "__main__":
     # Obter a porta da variável de ambiente API_PORT ou usar 8003 como padrão
