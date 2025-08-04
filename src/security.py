@@ -16,14 +16,13 @@ def hash_api_key(key: str) -> str:
     """Cria um hash da API Key para armazenamento seguro."""
     return hashlib.sha256(key.encode()).hexdigest()
 
-async def generate_api_key(name: str, expires_days: int = 365, allowed_ips: Optional[List[str]] = None) -> Dict[str, Any]:
+async def generate_api_key(name: str, expires_days: int = 365) -> Dict[str, Any]:
     """
     Gera uma nova API Key e a armazena no banco de dados.
     
     Args:
         name: Nome descritivo para identificar a API Key
         expires_days: Validade em dias
-        allowed_ips: Lista opcional de IPs ou CIDRs com permissão para usar esta chave
     
     Returns:
         Dicionário com informações sobre a API Key gerada
@@ -40,21 +39,20 @@ async def generate_api_key(name: str, expires_days: int = 365, allowed_ips: Opti
     try:
         result = await conn.fetchrow(
             """
-            INSERT INTO api_keys (key_hash, name, expires_at, allowed_ips)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, name, created_at, expires_at, is_active, allowed_ips
+            INSERT INTO api_keys (key_hash, name, expires_at)
+            VALUES ($1, $2, $3)
+            RETURNING id, name, created_at, expires_at, is_active
             """,
-            key_hash, name, expires_at, allowed_ips
+            key_hash, name, expires_at
         )
         
         return {
             "id": result["id"],
-            "api_key": api_key,  # Retornamos a chave apenas neste momento; depois só teremos o hash
+            "api_key": api_key,
             "name": result["name"],
             "created_at": result["created_at"].isoformat(),
             "expires_at": result["expires_at"].isoformat() if result["expires_at"] else None,
-            "is_active": result["is_active"],
-            "allowed_ips": result["allowed_ips"]
+            "is_active": result["is_active"]
         }
     finally:
         await conn.close()
@@ -80,7 +78,7 @@ async def validate_api_key(api_key: str, client_ip: Optional[str] = None) -> Opt
         # Busca a API Key e verifica se é válida
         result = await conn.fetchrow(
             """
-            SELECT id, name, created_at, expires_at, is_active, allowed_ips
+            SELECT id, name, created_at, expires_at, is_active
             FROM api_keys
             WHERE key_hash = $1
             """,
@@ -102,35 +100,13 @@ async def validate_api_key(api_key: str, client_ip: Optional[str] = None) -> Opt
                 result["id"]
             )
             return None
-            
-        # Verifica as restrições de IP, se houver
-        if result["allowed_ips"] and client_ip:
-            client_ip_obj = ip_address(client_ip)
-            ip_allowed = False
-            
-            for allowed_ip in result["allowed_ips"]:
-                # Verifica se é um IP único ou uma rede CIDR
-                if "/" in allowed_ip:
-                    # É uma rede CIDR
-                    if client_ip_obj in ip_network(allowed_ip, strict=False):
-                        ip_allowed = True
-                        break
-                else:
-                    # É um IP único
-                    if client_ip == allowed_ip:
-                        ip_allowed = True
-                        break
-                        
-            if not ip_allowed:
-                return None
-        
+
         return {
             "id": result["id"],
             "name": result["name"],
             "created_at": result["created_at"].isoformat(),
             "expires_at": result["expires_at"].isoformat() if result["expires_at"] else None,
-            "is_active": result["is_active"],
-            "allowed_ips": result["allowed_ips"]
+            "is_active": result["is_active"]
         }
     finally:
         await conn.close()
@@ -148,7 +124,7 @@ async def get_api_keys(active_only: bool = False) -> List[Dict[str, Any]]:
     conn = await get_db_conn()
     try:
         query = """
-            SELECT id, name, created_at, expires_at, is_active, allowed_ips
+            SELECT id, name, created_at, expires_at, is_active
             FROM api_keys
         """
         
@@ -163,8 +139,7 @@ async def get_api_keys(active_only: bool = False) -> List[Dict[str, Any]]:
                 "name": row["name"],
                 "created_at": row["created_at"].isoformat(),
                 "expires_at": row["expires_at"].isoformat() if row["expires_at"] else None,
-                "is_active": row["is_active"],
-                "allowed_ips": row["allowed_ips"]
+                "is_active": row["is_active"]
             }
             for row in results
         ]
